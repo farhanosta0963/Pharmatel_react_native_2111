@@ -76,6 +76,38 @@ export interface TodayDose {
   medicine: Medicine;
 }
 
+export interface DiaryMetric {
+  id: string;
+  type: string;
+  label: string;
+  value: string | number;
+  unit: string;
+  icon: string;
+}
+
+export interface DiaryEntry {
+  id: string;
+  patientId: string;
+  date: string;
+  time: string;
+  metrics: DiaryMetric[];
+  generalNotes?: string;
+  mood?: number;
+  createdAt: string;
+}
+
+export interface MetricDefinition {
+  type: string;
+  label: string;
+  unit: string;
+  icon: string;
+  inputType: "numeric" | "text" | "scale";
+  min?: number;
+  max?: number;
+  placeholder?: string;
+  color: string;
+}
+
 export interface Pharmacy {
   id: string;
   name: string;

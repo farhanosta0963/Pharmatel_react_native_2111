@@ -24,9 +24,9 @@ function NativeTabLayout() {
         <Icon sf={{ default: "magnifyingglass", selected: "magnifyingglass" }} />
         <Label>Search</Label>
       </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="notifications">
-        <Icon sf={{ default: "bell", selected: "bell.fill" }} />
-        <Label>Upcoming</Label>
+      <NativeTabs.Trigger name="diary">
+        <Icon sf={{ default: "book.pages", selected: "book.pages.fill" }} />
+        <Label>Diary</Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="profile">
         <Icon sf={{ default: "person", selected: "person.fill" }} />
@@ -118,13 +118,17 @@ function ClassicTabLayout() {
       />
       <Tabs.Screen
         name="notifications"
+        options={{ href: null }}
+      />
+      <Tabs.Screen
+        name="diary"
         options={{
-          title: "Upcoming",
+          title: "Diary",
           tabBarIcon: ({ color }) =>
             isIOS ? (
-              <SymbolView name="bell" tintColor={color} size={24} />
+              <SymbolView name="book.pages" tintColor={color} size={24} />
             ) : (
-              <Feather name="bell" size={22} color={color} />
+              <Feather name="book-open" size={22} color={color} />
             ),
         }}
       />

@@ -60,6 +60,15 @@ function RootLayoutNav() {
           headerBackTitle: "Search",
         }}
       />
+      <Stack.Screen
+        name="diary/new"
+        options={{
+          presentation: "modal",
+          headerShown: true,
+          title: "New Diary Entry",
+          headerBackTitle: "Diary",
+        }}
+      />
     </Stack>
   );
 }

@@ -1,5 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import type { DoseSchedule, ObservationSession, Prescription } from "@/models";
+import type { DiaryEntry, DoseSchedule, ObservationSession, Prescription } from "@/models";
 import {
   MOCK_OBSERVATION_SESSIONS,
   MOCK_PATIENT,
@@ -12,6 +12,7 @@ const KEYS = {
   PATIENT: "patient",
   PRESCRIPTIONS: "prescriptions",
   OBSERVATION_SESSIONS: "observation_sessions",
+  DIARY_ENTRIES: "diary_entries",
 };
 
 // Auth
@@ -107,6 +108,30 @@ export async function getObservationSessionByDose(
 ): Promise<ObservationSession | null> {
   const sessions = await getObservationSessions();
   return sessions.find((s) => s.doseScheduleId === doseScheduleId) ?? null;
+}
+
+// Diary Entries
+export async function getDiaryEntries(): Promise<DiaryEntry[]> {
+  const stored = await AsyncStorage.getItem(KEYS.DIARY_ENTRIES);
+  if (stored) return JSON.parse(stored);
+  return [];
+}
+
+export async function saveDiaryEntry(entry: DiaryEntry): Promise<void> {
+  const entries = await getDiaryEntries();
+  const idx = entries.findIndex((e) => e.id === entry.id);
+  if (idx >= 0) {
+    entries[idx] = entry;
+  } else {
+    entries.unshift(entry);
+  }
+  await AsyncStorage.setItem(KEYS.DIARY_ENTRIES, JSON.stringify(entries));
+}
+
+export async function deleteDiaryEntry(entryId: string): Promise<void> {
+  const entries = await getDiaryEntries();
+  const updated = entries.filter((e) => e.id !== entryId);
+  await AsyncStorage.setItem(KEYS.DIARY_ENTRIES, JSON.stringify(updated));
 }
 
 export { MOCK_SYMPTOM_DEFINITIONS };

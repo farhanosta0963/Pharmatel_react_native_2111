@@ -7,6 +7,7 @@ import React, {
   useState,
 } from "react";
 import type {
+  DiaryEntry,
   DoseSchedule,
   ObservationSession,
   Patient,
@@ -14,6 +15,8 @@ import type {
 } from "@/models";
 import {
   clearAuthToken,
+  deleteDiaryEntry,
+  getDiaryEntries,
   getAuthToken,
   getObservationSessionByDose,
   getObservationSessions,
@@ -22,6 +25,7 @@ import {
   logout as logoutService,
   MOCK_SYMPTOM_DEFINITIONS,
   saveObservationSession,
+  saveDiaryEntry,
   updateDoseSchedule,
 } from "@/services/storage";
 
@@ -31,6 +35,7 @@ interface AppContextValue {
   isLoading: boolean;
   prescriptions: Prescription[];
   observationSessions: ObservationSession[];
+  diaryEntries: DiaryEntry[];
   login: (username: string, password: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => Promise<void>;
   markDoseTaken: (
@@ -42,6 +47,9 @@ interface AppContextValue {
   saveObservation: (session: ObservationSession) => Promise<void>;
   getSessionForDose: (doseScheduleId: string) => Promise<ObservationSession | null>;
   symptomDefinitions: typeof MOCK_SYMPTOM_DEFINITIONS;
+  addDiaryEntry: (entry: DiaryEntry) => Promise<void>;
+  updateDiaryEntry: (entry: DiaryEntry) => Promise<void>;
+  removeDiaryEntry: (entryId: string) => Promise<void>;
 }
 
 const AppContext = createContext<AppContextValue | null>(null);
@@ -52,6 +60,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
   const [observationSessions, setObservationSessions] = useState<ObservationSession[]>([]);
+  const [diaryEntries, setDiaryEntries] = useState<DiaryEntry[]>([]);
 
   useEffect(() => {
     checkAuth();
@@ -76,12 +85,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   const loadData = async () => {
-    const [rxs, sessions] = await Promise.all([
+    const [rxs, sessions, entries] = await Promise.all([
       getPrescriptions(),
       getObservationSessions(),
+      getDiaryEntries(),
     ]);
     setPrescriptions(rxs);
     setObservationSessions(sessions);
+    setDiaryEntries(entries);
   };
 
   const login = useCallback(
@@ -104,6 +115,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setIsAuthenticated(false);
     setPrescriptions([]);
     setObservationSessions([]);
+    setDiaryEntries([]);
   }, []);
 
   const markDoseTaken = useCallback(
@@ -137,6 +149,23 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     []
   );
 
+  const addDiaryEntry = useCallback(async (entry: DiaryEntry) => {
+    await saveDiaryEntry(entry);
+    const entries = await getDiaryEntries();
+    setDiaryEntries(entries);
+  }, []);
+
+  const updateDiaryEntry = useCallback(async (entry: DiaryEntry) => {
+    await saveDiaryEntry(entry);
+    const entries = await getDiaryEntries();
+    setDiaryEntries(entries);
+  }, []);
+
+  const removeDiaryEntry = useCallback(async (entryId: string) => {
+    await deleteDiaryEntry(entryId);
+    setDiaryEntries((prev) => prev.filter((e) => e.id !== entryId));
+  }, []);
+
   return (
     <AppContext.Provider
       value={{
@@ -145,6 +174,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         isLoading,
         prescriptions,
         observationSessions,
+        diaryEntries,
         login,
         logout,
         markDoseTaken,
@@ -152,6 +182,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         saveObservation,
         getSessionForDose,
         symptomDefinitions: MOCK_SYMPTOM_DEFINITIONS,
+        addDiaryEntry,
+        updateDiaryEntry,
+        removeDiaryEntry,
       }}
     >
       {children}

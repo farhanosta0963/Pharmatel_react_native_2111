@@ -1,0 +1,122 @@
+You are a senior mobile engineer. Generate a production-structured React Native application based on the provided UI and database schema.
+
+Tech Stack:
+
+* React Native (Expo preferred)
+* TypeScript
+* React Navigation
+* AsyncStorage (for local caching)
+* Axios for API calls
+
+Architecture:
+
+* /components (reusable UI)
+* /screens (pages)
+* /navigation (navigation setup)
+* /services (API calls)
+* /models (TypeScript interfaces based on database)
+* /hooks (custom hooks)
+* /utils
+
+App Purpose:
+This is a patient medication management app.
+
+The backend is built using a relational database with the following core entities:
+
+* Patient
+* Medicine
+* Prescription
+* DoseSchedule
+* ObservationSession
+* Observation (symptoms tracking)
+
+Map the database into frontend models.
+
+Core Features to Implement:
+
+1. Authentication:
+
+* Login using account (username, password)
+* Store token locally
+
+2. Home Screen:
+
+* Show today's medications from dose_schedule
+* Show status (taken / not taken)
+
+3. Medication Schedule:
+
+* List all prescriptions
+* Expand each to show dose schedules
+
+4. Dose Action:
+
+* Mark dose as taken
+* Save taken_at timestamp
+* Allow adding patient_personal_note
+
+5. Medication Detail Screen:
+
+* Show:
+
+  * medicine name
+  * dose
+  * frequency
+  * food requirement
+  * start/end dates
+
+6. Notifications UI:
+
+* Display upcoming doses
+* (no need to implement native notifications yet, just UI)
+
+7. Observation / Diary Feature:
+
+* After taking a dose, allow user to:
+
+  * Create observation_session
+  * Add observations:
+
+    * numeric (e.g. pain level)
+    * boolean (e.g. nausea yes/no)
+    * text notes
+
+8. Data Handling:
+
+* Use mock API service (simulate backend using JSON based on schema)
+* Structure responses similar to real backend
+
+Example Models (important):
+
+* Prescription
+* DoseSchedule
+* Medicine
+* Observation
+* SymptomDefinition
+
+Behavior Rules:
+
+* A prescription has many dose schedules
+* A dose schedule belongs to one prescription
+* A user interacts mainly with dose_schedule
+* Observations are linked to a dose through observation_session
+
+UI Rules:
+
+* Use the provided UI design strictly
+* Break UI into reusable components
+* Keep components small and clean
+
+Important:
+
+* DO NOT generate everything in one file
+* Generate multiple files with proper structure
+* Include navigation setup
+* Include example mock data
+* Include basic styling
+
+Output:
+
+* Full project structure
+* All necessary files
+* Clean, readable, maintainable code

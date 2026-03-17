@@ -52,6 +52,14 @@ function RootLayoutNav() {
           headerBackTitle: "Back",
         }}
       />
+      <Stack.Screen
+        name="pharmacies/[medicineId]"
+        options={{
+          headerShown: true,
+          title: "Find Pharmacies",
+          headerBackTitle: "Search",
+        }}
+      />
     </Stack>
   );
 }

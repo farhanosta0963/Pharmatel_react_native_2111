@@ -75,3 +75,17 @@ export interface TodayDose {
   prescription: Prescription;
   medicine: Medicine;
 }
+
+export interface Pharmacy {
+  id: string;
+  name: string;
+  address: string;
+  phone: string;
+  lat: number;
+  lng: number;
+  openHours: string;
+  distance?: string;
+  inStock: boolean;
+  price?: string;
+  rating: number;
+}

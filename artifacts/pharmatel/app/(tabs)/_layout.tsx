@@ -20,6 +20,10 @@ function NativeTabLayout() {
         <Icon sf={{ default: "list.clipboard", selected: "list.clipboard.fill" }} />
         <Label>Schedule</Label>
       </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="search" role="search">
+        <Icon sf={{ default: "magnifyingglass", selected: "magnifyingglass" }} />
+        <Label>Search</Label>
+      </NativeTabs.Trigger>
       <NativeTabs.Trigger name="notifications">
         <Icon sf={{ default: "bell", selected: "bell.fill" }} />
         <Label>Upcoming</Label>
@@ -48,7 +52,7 @@ function ClassicTabLayout() {
         tabBarInactiveTintColor: colors.tabIconDefault,
         tabBarStyle: {
           position: "absolute",
-          backgroundColor: isIOS ? "transparent" : isDark ? colors.surface : colors.surface,
+          backgroundColor: isIOS ? "transparent" : colors.surface,
           borderTopWidth: isWeb ? 1 : 0,
           borderTopColor: colors.border,
           elevation: 0,
@@ -66,7 +70,11 @@ function ClassicTabLayout() {
             <View
               style={[
                 StyleSheet.absoluteFill,
-                { backgroundColor: isDark ? colors.surface : "#fff", borderTopWidth: 1, borderTopColor: colors.border },
+                {
+                  backgroundColor: isDark ? colors.surface : "#fff",
+                  borderTopWidth: 1,
+                  borderTopColor: colors.border,
+                },
               ]}
             />
           ) : null,
@@ -93,6 +101,18 @@ function ClassicTabLayout() {
               <SymbolView name="list.clipboard" tintColor={color} size={24} />
             ) : (
               <Feather name="list" size={22} color={color} />
+            ),
+        }}
+      />
+      <Tabs.Screen
+        name="search"
+        options={{
+          title: "Search",
+          tabBarIcon: ({ color }) =>
+            isIOS ? (
+              <SymbolView name="magnifyingglass" tintColor={color} size={24} />
+            ) : (
+              <Feather name="search" size={22} color={color} />
             ),
         }}
       />

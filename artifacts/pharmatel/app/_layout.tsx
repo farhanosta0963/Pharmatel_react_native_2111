@@ -69,6 +69,15 @@ function RootLayoutNav() {
           headerBackTitle: "Diary",
         }}
       />
+      <Stack.Screen
+        name="prescription/new"
+        options={{
+          presentation: "modal",
+          headerShown: true,
+          title: "Add Prescription",
+          headerBackTitle: "Schedule",
+        }}
+      />
     </Stack>
   );
 }

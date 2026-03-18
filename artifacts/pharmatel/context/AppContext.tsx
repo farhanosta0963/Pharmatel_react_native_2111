@@ -52,6 +52,8 @@ interface AppContextValue {
   addDiaryEntry: (entry: DiaryEntry) => Promise<void>;
   updateDiaryEntry: (entry: DiaryEntry) => Promise<void>;
   removeDiaryEntry: (entryId: string) => Promise<void>;
+  addUserPrescription: (prescription: Prescription) => Promise<void>;
+  deleteUserPrescription: (prescriptionId: string) => Promise<void>;
 }
 
 const AppContext = createContext<AppContextValue | null>(null);
@@ -168,6 +170,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setDiaryEntries((prev) => prev.filter((e) => e.id !== entryId));
   }, []);
 
+  const addUserPrescription = useCallback(async (prescription: Prescription) => {
+    const updated = await addPrescription(prescription);
+    setPrescriptions(updated);
+  }, []);
+
+  const deleteUserPrescription = useCallback(async (prescriptionId: string) => {
+    const updated = await removePrescription(prescriptionId);
+    setPrescriptions(updated);
+  }, []);
+
   return (
     <AppContext.Provider
       value={{
@@ -187,6 +199,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         addDiaryEntry,
         updateDiaryEntry,
         removeDiaryEntry,
+        addUserPrescription,
+        deleteUserPrescription,
       }}
     >
       {children}

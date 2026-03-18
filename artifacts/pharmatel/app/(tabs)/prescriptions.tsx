@@ -2,7 +2,9 @@ import { Feather } from "@expo/vector-icons";
 import { router } from "expo-router";
 import React, { useState } from "react";
 import {
+  Alert,
   Platform,
+  Pressable,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -19,7 +21,7 @@ export default function PrescriptionsScreen() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme === "dark" ? "dark" : "light"];
   const insets = useSafeAreaInsets();
-  const { prescriptions, refreshPrescriptions } = useApp();
+  const { prescriptions, refreshPrescriptions, deleteUserPrescription } = useApp();
   const [refreshing, setRefreshing] = useState(false);
 
   const topPadding = insets.top + (Platform.OS === "web" ? 67 : 0);
@@ -30,16 +32,42 @@ export default function PrescriptionsScreen() {
     setRefreshing(false);
   };
 
+  const handleDelete = (rxId: string, name: string) => {
+    Alert.alert(
+      "Remove Prescription",
+      `Remove "${name}" from your schedule?`,
+      [
+        { text: "Cancel", style: "cancel" },
+        { text: "Remove", style: "destructive", onPress: () => deleteUserPrescription(rxId) },
+      ]
+    );
+  };
+
   const active = prescriptions.filter((rx) => !rx.endDate || new Date(rx.endDate) >= new Date());
   const completed = prescriptions.filter((rx) => rx.endDate && new Date(rx.endDate) < new Date());
+  const isUserAdded = (rx: { id: string }) => rx.id.startsWith("rx_user_");
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={[styles.header, { paddingTop: topPadding, backgroundColor: colors.surface, borderBottomColor: colors.borderLight }]}>
-        <Text style={[styles.title, { color: colors.text }]}>Prescription Schedule</Text>
-        <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-          {active.length} active prescription{active.length !== 1 ? "s" : ""}
-        </Text>
+        <View style={styles.headerTop}>
+          <View>
+            <Text style={[styles.title, { color: colors.text }]}>Prescription Schedule</Text>
+            <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
+              {active.length} active prescription{active.length !== 1 ? "s" : ""}
+            </Text>
+          </View>
+          <Pressable
+            onPress={() => router.push("/prescription/new")}
+            style={({ pressed }) => [
+              styles.addBtn,
+              { backgroundColor: colors.primary, opacity: pressed ? 0.8 : 1 },
+            ]}
+          >
+            <Feather name="plus" size={18} color="#fff" />
+            <Text style={styles.addBtnText}>Add</Text>
+          </Pressable>
+        </View>
       </View>
 
       <ScrollView
@@ -57,16 +85,23 @@ export default function PrescriptionsScreen() {
               <Text style={[styles.sectionTitle, { color: colors.text }]}>Active</Text>
             </View>
             {active.map((rx) => (
-              <PrescriptionCard
-                key={rx.id}
-                prescription={rx}
-                onPress={() =>
-                  router.push({
-                    pathname: "/medicine/[id]",
-                    params: { id: rx.medicineId, prescriptionId: rx.id },
-                  })
-                }
-              />
+              <View key={rx.id} style={styles.cardWrap}>
+                <PrescriptionCard
+                  prescription={rx}
+                  onPress={() =>
+                    router.push({ pathname: "/medicine/[id]", params: { id: rx.medicineId, prescriptionId: rx.id } })
+                  }
+                />
+                {isUserAdded(rx) && (
+                  <Pressable
+                    onPress={() => handleDelete(rx.id, rx.medicine.name)}
+                    style={({ pressed }) => [styles.deleteBtn, { backgroundColor: "#FF3B3010", opacity: pressed ? 0.6 : 1 }]}
+                    hitSlop={4}
+                  >
+                    <Feather name="trash-2" size={14} color="#FF3B30" />
+                  </Pressable>
+                )}
+              </View>
             ))}
           </View>
         )}
@@ -78,16 +113,23 @@ export default function PrescriptionsScreen() {
               <Text style={[styles.sectionTitle, { color: colors.text }]}>Completed</Text>
             </View>
             {completed.map((rx) => (
-              <PrescriptionCard
-                key={rx.id}
-                prescription={rx}
-                onPress={() =>
-                  router.push({
-                    pathname: "/medicine/[id]",
-                    params: { id: rx.medicineId, prescriptionId: rx.id },
-                  })
-                }
-              />
+              <View key={rx.id} style={styles.cardWrap}>
+                <PrescriptionCard
+                  prescription={rx}
+                  onPress={() =>
+                    router.push({ pathname: "/medicine/[id]", params: { id: rx.medicineId, prescriptionId: rx.id } })
+                  }
+                />
+                {isUserAdded(rx) && (
+                  <Pressable
+                    onPress={() => handleDelete(rx.id, rx.medicine.name)}
+                    style={({ pressed }) => [styles.deleteBtn, { backgroundColor: "#FF3B3010", opacity: pressed ? 0.6 : 1 }]}
+                    hitSlop={4}
+                  >
+                    <Feather name="trash-2" size={14} color="#FF3B30" />
+                  </Pressable>
+                )}
+              </View>
             ))}
           </View>
         )}
@@ -96,11 +138,18 @@ export default function PrescriptionsScreen() {
           <View style={[styles.emptyState, { backgroundColor: colors.surface, borderColor: colors.border }]}>
             <Feather name="clipboard" size={40} color={colors.textMuted} />
             <Text style={[styles.emptyTitle, { color: colors.text }]}>
-              No Prescriptions
+              No Prescriptions Yet
             </Text>
             <Text style={[styles.emptyDesc, { color: colors.textSecondary }]}>
-              Your prescriptions will appear here once added by your doctor.
+              Tap "Add" to schedule your own medications, or your doctor can add them for you.
             </Text>
+            <Pressable
+              onPress={() => router.push("/prescription/new")}
+              style={({ pressed }) => [styles.emptyAddBtn, { backgroundColor: colors.primary, opacity: pressed ? 0.8 : 1 }]}
+            >
+              <Feather name="plus" size={16} color="#fff" />
+              <Text style={styles.emptyAddText}>Add Prescription</Text>
+            </Pressable>
           </View>
         )}
       </ScrollView>
@@ -116,16 +165,64 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingBottom: 16,
     borderBottomWidth: 1,
-    gap: 4,
+  },
+  headerTop: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
   },
   title: {
     fontSize: 26,
     fontFamily: "Inter_700Bold",
     letterSpacing: -0.5,
+    marginTop: 8,
   },
   subtitle: {
     fontSize: 14,
     fontFamily: "Inter_400Regular",
+    marginTop: 2,
+  },
+  addBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingVertical: 9,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    marginTop: 8,
+  },
+  addBtnText: {
+    fontSize: 15,
+    fontFamily: "Inter_700Bold",
+    color: "#fff",
+  },
+  cardWrap: {
+    position: "relative",
+  },
+  deleteBtn: {
+    position: "absolute",
+    top: 10,
+    right: 10,
+    width: 30,
+    height: 30,
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  emptyAddBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 14,
+    marginTop: 4,
+  },
+  emptyAddText: {
+    fontSize: 15,
+    fontFamily: "Inter_700Bold",
+    color: "#fff",
   },
   scrollContent: {
     padding: 20,

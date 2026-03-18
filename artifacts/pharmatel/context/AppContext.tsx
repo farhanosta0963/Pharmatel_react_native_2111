@@ -14,6 +14,7 @@ import type {
   Prescription,
 } from "@/models";
 import {
+  addPrescription,
   clearAuthToken,
   deleteDiaryEntry,
   getDiaryEntries,
@@ -24,6 +25,7 @@ import {
   login as loginService,
   logout as logoutService,
   MOCK_SYMPTOM_DEFINITIONS,
+  removePrescription,
   saveObservationSession,
   saveDiaryEntry,
   updateDoseSchedule,

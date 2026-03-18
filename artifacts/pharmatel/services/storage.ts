@@ -110,6 +110,21 @@ export async function getObservationSessionByDose(
   return sessions.find((s) => s.doseScheduleId === doseScheduleId) ?? null;
 }
 
+// Add / remove prescriptions
+export async function addPrescription(prescription: Prescription): Promise<Prescription[]> {
+  const prescriptions = await getPrescriptions();
+  prescriptions.unshift(prescription);
+  await AsyncStorage.setItem(KEYS.PRESCRIPTIONS, JSON.stringify(prescriptions));
+  return prescriptions;
+}
+
+export async function removePrescription(prescriptionId: string): Promise<Prescription[]> {
+  const prescriptions = await getPrescriptions();
+  const updated = prescriptions.filter((rx) => rx.id !== prescriptionId);
+  await AsyncStorage.setItem(KEYS.PRESCRIPTIONS, JSON.stringify(updated));
+  return updated;
+}
+
 // Diary Entries
 export async function getDiaryEntries(): Promise<DiaryEntry[]> {
   const stored = await AsyncStorage.getItem(KEYS.DIARY_ENTRIES);

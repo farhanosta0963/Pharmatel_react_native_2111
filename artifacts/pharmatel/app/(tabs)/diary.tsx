@@ -4,6 +4,7 @@ import React, { useMemo, useState } from "react";
 import {
   Alert,
   FlatList,
+  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -508,6 +509,242 @@ type ListItem =
       isAbsLast: boolean;
     };
 
+/* ─── calendar picker modal ──────────────────────────────────────────────── */
+
+const WEEKDAYS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
+
+function CalendarModal({
+  visible,
+  selectedDate,
+  entryDates,
+  colors,
+  onSelect,
+  onClose,
+}: {
+  visible: boolean;
+  selectedDate: string | null;
+  entryDates: Set<string>;
+  colors: (typeof Colors)["light"];
+  onSelect: (date: string) => void;
+  onClose: () => void;
+}) {
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const [viewYear, setViewYear] = useState(() => new Date().getFullYear());
+  const [viewMonth, setViewMonth] = useState(() => new Date().getMonth()); // 0-based
+
+  const prevMonth = () => {
+    if (viewMonth === 0) { setViewMonth(11); setViewYear(y => y - 1); }
+    else setViewMonth(m => m - 1);
+  };
+  const nextMonth = () => {
+    if (viewMonth === 11) { setViewMonth(0); setViewYear(y => y + 1); }
+    else setViewMonth(m => m + 1);
+  };
+
+  // Build the grid cells for this month
+  const cells = useMemo(() => {
+    const firstDay = new Date(viewYear, viewMonth, 1).getDay(); // 0=Sun
+    const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
+    const items: Array<{ dateStr: string; day: number } | null> = [];
+    for (let i = 0; i < firstDay; i++) items.push(null);
+    for (let d = 1; d <= daysInMonth; d++) {
+      const mm = String(viewMonth + 1).padStart(2, "0");
+      const dd = String(d).padStart(2, "0");
+      items.push({ dateStr: `${viewYear}-${mm}-${dd}`, day: d });
+    }
+    return items;
+  }, [viewYear, viewMonth]);
+
+  const monthLabel = new Date(viewYear, viewMonth, 1).toLocaleDateString("en-US", {
+    month: "long",
+    year: "numeric",
+  });
+
+  return (
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      onRequestClose={onClose}
+    >
+      <Pressable style={calStyles.backdrop} onPress={onClose}>
+        <Pressable style={[calStyles.card, { backgroundColor: colors.surface }]} onPress={(e) => e.stopPropagation()}>
+          {/* Month nav */}
+          <View style={calStyles.nav}>
+            <Pressable onPress={prevMonth} style={calStyles.navBtn} hitSlop={10}>
+              <Feather name="chevron-left" size={20} color={colors.text} />
+            </Pressable>
+            <Text style={[calStyles.monthLabel, { color: colors.text }]}>{monthLabel}</Text>
+            <Pressable onPress={nextMonth} style={calStyles.navBtn} hitSlop={10}>
+              <Feather name="chevron-right" size={20} color={colors.text} />
+            </Pressable>
+          </View>
+
+          {/* Weekday headers */}
+          <View style={calStyles.row}>
+            {WEEKDAYS.map((wd) => (
+              <Text key={wd} style={[calStyles.wd, { color: colors.textMuted }]}>{wd}</Text>
+            ))}
+          </View>
+
+          {/* Day grid */}
+          <View style={calStyles.grid}>
+            {cells.map((cell, idx) => {
+              if (!cell) return <View key={`e-${idx}`} style={calStyles.cell} />;
+              const isSelected = cell.dateStr === selectedDate;
+              const isToday = cell.dateStr === todayStr;
+              const hasEntry = entryDates.has(cell.dateStr);
+              return (
+                <Pressable
+                  key={cell.dateStr}
+                  style={({ pressed }) => [
+                    calStyles.cell,
+                    calStyles.dayCell,
+                    isSelected && { backgroundColor: colors.primary, borderRadius: 22 },
+                    !isSelected && isToday && { borderWidth: 1.5, borderColor: colors.primary, borderRadius: 22 },
+                    { opacity: pressed ? 0.7 : 1 },
+                  ]}
+                  onPress={() => { onSelect(cell.dateStr); onClose(); }}
+                >
+                  <Text style={[
+                    calStyles.dayNum,
+                    { color: isSelected ? "#fff" : isToday ? colors.primary : colors.text },
+                  ]}>
+                    {cell.day}
+                  </Text>
+                  {hasEntry && (
+                    <View style={[calStyles.dot, { backgroundColor: isSelected ? "rgba(255,255,255,0.75)" : colors.primary }]} />
+                  )}
+                </Pressable>
+              );
+            })}
+          </View>
+
+          {/* Footer */}
+          <View style={[calStyles.footer, { borderTopColor: colors.borderLight }]}>
+            <Pressable onPress={onClose} style={({ pressed }) => [calStyles.cancelBtn, { opacity: pressed ? 0.6 : 1 }]}>
+              <Text style={[calStyles.cancelText, { color: colors.textSecondary }]}>Cancel</Text>
+            </Pressable>
+            {selectedDate && (
+              <Pressable
+                onPress={() => { onSelect(selectedDate); onClose(); }}
+                style={({ pressed }) => [calStyles.clearBtn, { backgroundColor: colors.primary + "15", opacity: pressed ? 0.7 : 1 }]}
+              >
+                <Feather name="x" size={13} color={colors.primary} />
+                <Text style={[calStyles.clearText, { color: colors.primary }]}>Clear</Text>
+              </Pressable>
+            )}
+          </View>
+        </Pressable>
+      </Pressable>
+    </Modal>
+  );
+}
+
+const calStyles = StyleSheet.create({
+  backdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.45)",
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 24,
+  },
+  card: {
+    width: "100%",
+    maxWidth: 360,
+    borderRadius: 20,
+    paddingTop: 20,
+    paddingBottom: 0,
+    shadowColor: "#000",
+    shadowOpacity: 0.18,
+    shadowRadius: 20,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 12,
+  },
+  nav: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    marginBottom: 14,
+  },
+  navBtn: {
+    padding: 6,
+    borderRadius: 10,
+  },
+  monthLabel: {
+    fontSize: 17,
+    fontFamily: "Inter_700Bold",
+    letterSpacing: -0.3,
+  },
+  row: {
+    flexDirection: "row",
+    paddingHorizontal: 12,
+    marginBottom: 4,
+  },
+  wd: {
+    flex: 1,
+    textAlign: "center",
+    fontSize: 12,
+    fontFamily: "Inter_600SemiBold",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  grid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    paddingHorizontal: 12,
+    paddingBottom: 10,
+  },
+  cell: {
+    width: `${100 / 7}%`,
+    aspectRatio: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  dayCell: {
+    padding: 2,
+  },
+  dayNum: {
+    fontSize: 15,
+    fontFamily: "Inter_500Medium",
+  },
+  dot: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    marginTop: 1,
+  },
+  footer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    borderTopWidth: 1,
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+  },
+  cancelBtn: {
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+  },
+  cancelText: {
+    fontSize: 15,
+    fontFamily: "Inter_500Medium",
+  },
+  clearBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+  },
+  clearText: {
+    fontSize: 14,
+    fontFamily: "Inter_600SemiBold",
+  },
+});
+
 /* ─── day picker strip ────────────────────────────────────────────────────── */
 
 function buildDayRange(diaryEntries: DiaryEntry[]): string[] {
@@ -530,12 +767,14 @@ function DayPickerStrip({
   days,
   selectedDate,
   onSelect,
+  onOpenCalendar,
   entryDates,
   colors,
 }: {
   days: string[];
   selectedDate: string | null;
   onSelect: (date: string | null) => void;
+  onOpenCalendar: () => void;
   entryDates: Set<string>;
   colors: (typeof Colors)["light"];
 }) {
@@ -619,6 +858,20 @@ function DayPickerStrip({
           );
         })}
       </ScrollView>
+
+      {/* Calendar picker button */}
+      <Pressable
+        onPress={onOpenCalendar}
+        style={({ pressed }) => [
+          dpStyles.calBtn,
+          { borderLeftColor: colors.borderLight, opacity: pressed ? 0.6 : 1 },
+        ]}
+        hitSlop={4}
+      >
+        <View style={[dpStyles.calBtnInner, { backgroundColor: colors.primary + "18", borderColor: colors.primary + "35" }]}>
+          <Feather name="calendar" size={15} color={colors.primary} />
+        </View>
+      </Pressable>
     </View>
   );
 }
@@ -626,12 +879,16 @@ function DayPickerStrip({
 const dpStyles = StyleSheet.create({
   wrap: {
     borderBottomWidth: 1,
+    flexDirection: "row",
+    alignItems: "center",
   },
   scroll: {
-    paddingHorizontal: 14,
+    paddingLeft: 14,
+    paddingRight: 8,
     paddingVertical: 12,
     gap: 8,
     alignItems: "flex-start",
+    flexGrow: 1,
   },
   chip: {
     alignItems: "center",
@@ -675,6 +932,21 @@ const dpStyles = StyleSheet.create({
     borderRadius: 3,
     marginTop: 2,
   },
+  calBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    borderLeftWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  calBtnInner: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
 });
 
 /* ─── main screen ─────────────────────────────────────────────────────────── */
@@ -687,6 +959,7 @@ export default function DiaryScreen() {
   const topPadding = insets.top + (Platform.OS === "web" ? 67 : 0);
   const [isSharing, setIsSharing] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [showCalendar, setShowCalendar] = useState(false);
 
   const todayStr = new Date().toISOString().slice(0, 10);
 
@@ -825,8 +1098,19 @@ export default function DiaryScreen() {
         days={dayRange}
         selectedDate={selectedDate}
         onSelect={setSelectedDate}
+        onOpenCalendar={() => setShowCalendar(true)}
         entryDates={entryDates}
         colors={colors}
+      />
+
+      {/* ── calendar modal ── */}
+      <CalendarModal
+        visible={showCalendar}
+        selectedDate={selectedDate}
+        entryDates={entryDates}
+        colors={colors}
+        onSelect={(date) => setSelectedDate(date)}
+        onClose={() => setShowCalendar(false)}
       />
 
       {/* ── vitals strip (selected day or today) ── */}

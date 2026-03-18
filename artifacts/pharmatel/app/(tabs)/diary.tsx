@@ -508,6 +508,175 @@ type ListItem =
       isAbsLast: boolean;
     };
 
+/* ─── day picker strip ────────────────────────────────────────────────────── */
+
+function buildDayRange(diaryEntries: DiaryEntry[]): string[] {
+  // Always show last 14 days, plus any dates from entries beyond that
+  const days: Set<string> = new Set();
+  const today = new Date();
+  for (let i = 0; i < 14; i++) {
+    const d = new Date(today);
+    d.setDate(today.getDate() - i);
+    days.add(d.toISOString().slice(0, 10));
+  }
+  // Also include any entry dates older than 14 days
+  for (const e of diaryEntries) {
+    days.add(e.date);
+  }
+  return Array.from(days).sort((a, b) => b.localeCompare(a));
+}
+
+function DayPickerStrip({
+  days,
+  selectedDate,
+  onSelect,
+  entryDates,
+  colors,
+}: {
+  days: string[];
+  selectedDate: string | null;
+  onSelect: (date: string | null) => void;
+  entryDates: Set<string>;
+  colors: (typeof Colors)["light"];
+}) {
+  return (
+    <View style={[dpStyles.wrap, { backgroundColor: colors.surface, borderBottomColor: colors.borderLight }]}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={dpStyles.scroll}
+      >
+        {/* "All" chip */}
+        <Pressable
+          onPress={() => onSelect(null)}
+          style={({ pressed }) => [
+            dpStyles.chip,
+            dpStyles.allChip,
+            {
+              backgroundColor: selectedDate === null ? colors.primary : colors.surfaceSecondary,
+              borderColor: selectedDate === null ? colors.primary : colors.border,
+              opacity: pressed ? 0.75 : 1,
+            },
+          ]}
+        >
+          <Feather
+            name="layers"
+            size={13}
+            color={selectedDate === null ? "#fff" : colors.textSecondary}
+          />
+          <Text style={[dpStyles.allText, { color: selectedDate === null ? "#fff" : colors.textSecondary }]}>
+            All
+          </Text>
+        </Pressable>
+
+        {days.map((d) => {
+          const isSelected = selectedDate === d;
+          const hasEntry = entryDates.has(d);
+          const dt = new Date(d + "T00:00:00");
+          const isToday = d === new Date().toISOString().slice(0, 10);
+          const dayName = isToday
+            ? "Today"
+            : dt.toLocaleDateString("en-US", { weekday: "short" });
+          const dayNum = dt.getDate();
+          const monthAbbr = dt.toLocaleDateString("en-US", { month: "short" });
+
+          return (
+            <Pressable
+              key={d}
+              onPress={() => onSelect(isSelected ? null : d)}
+              style={({ pressed }) => [
+                dpStyles.chip,
+                {
+                  backgroundColor: isSelected ? colors.primary : colors.surfaceSecondary,
+                  borderColor: isSelected
+                    ? colors.primary
+                    : hasEntry
+                    ? colors.primary + "40"
+                    : colors.border,
+                  opacity: pressed ? 0.75 : 1,
+                },
+              ]}
+            >
+              <Text style={[dpStyles.dayName, { color: isSelected ? "rgba(255,255,255,0.8)" : colors.textMuted }]}>
+                {dayName}
+              </Text>
+              <Text style={[dpStyles.dayNum, { color: isSelected ? "#fff" : colors.text }]}>
+                {dayNum}
+              </Text>
+              <Text style={[dpStyles.monthAbbr, { color: isSelected ? "rgba(255,255,255,0.7)" : colors.textMuted }]}>
+                {monthAbbr}
+              </Text>
+              {/* entry dot */}
+              {hasEntry && (
+                <View
+                  style={[
+                    dpStyles.entryDot,
+                    { backgroundColor: isSelected ? "rgba(255,255,255,0.7)" : colors.primary },
+                  ]}
+                />
+              )}
+            </Pressable>
+          );
+        })}
+      </ScrollView>
+    </View>
+  );
+}
+
+const dpStyles = StyleSheet.create({
+  wrap: {
+    borderBottomWidth: 1,
+  },
+  scroll: {
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    gap: 8,
+    alignItems: "flex-start",
+  },
+  chip: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    gap: 1,
+    minWidth: 54,
+  },
+  allChip: {
+    flexDirection: "row",
+    gap: 5,
+    paddingHorizontal: 16,
+    minWidth: 0,
+  },
+  allText: {
+    fontSize: 13,
+    fontFamily: "Inter_700Bold",
+  },
+  dayName: {
+    fontSize: 10,
+    fontFamily: "Inter_500Medium",
+    textTransform: "uppercase",
+    letterSpacing: 0.3,
+  },
+  dayNum: {
+    fontSize: 18,
+    fontFamily: "Inter_700Bold",
+    letterSpacing: -0.5,
+    lineHeight: 22,
+  },
+  monthAbbr: {
+    fontSize: 10,
+    fontFamily: "Inter_500Medium",
+  },
+  entryDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 3,
+    marginTop: 2,
+  },
+});
+
 /* ─── main screen ─────────────────────────────────────────────────────────── */
 
 export default function DiaryScreen() {
@@ -517,12 +686,26 @@ export default function DiaryScreen() {
   const { diaryEntries, removeDiaryEntry, patient } = useApp();
   const topPadding = insets.top + (Platform.OS === "web" ? 67 : 0);
   const [isSharing, setIsSharing] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
 
   const todayStr = new Date().toISOString().slice(0, 10);
 
+  // ── day picker data ──
+  const dayRange = useMemo(() => buildDayRange(diaryEntries), [diaryEntries]);
+  const entryDates = useMemo(
+    () => new Set(diaryEntries.map((e) => e.date)),
+    [diaryEntries]
+  );
+
+  // ── filtered entries ──
+  const filteredEntries = useMemo(
+    () => (selectedDate ? diaryEntries.filter((e) => e.date === selectedDate) : diaryEntries),
+    [diaryEntries, selectedDate]
+  );
+
   // ── build flat list data ──
   const listData = useMemo<ListItem[]>(() => {
-    const sorted = [...diaryEntries].sort((a, b) => {
+    const sorted = [...filteredEntries].sort((a, b) => {
       const dateCmp = b.date.localeCompare(a.date);
       if (dateCmp !== 0) return dateCmp;
       return b.time.localeCompare(a.time);
@@ -530,20 +713,6 @@ export default function DiaryScreen() {
 
     const items: ListItem[] = [];
     let lastDate = "";
-    let dateFirstIdx = 0;
-    let firstSection = true;
-    const entryItems: ListItem[] = [];
-    const dateGroups: string[] = [];
-
-    for (let i = 0; i < sorted.length; i++) {
-      const entry = sorted[i];
-      if (entry.date !== lastDate) {
-        dateGroups.push(entry.date);
-        lastDate = entry.date;
-      }
-    }
-
-    lastDate = "";
     let sectionIdx = 0;
     for (let i = 0; i < sorted.length; i++) {
       const entry = sorted[i];
@@ -577,19 +746,23 @@ export default function DiaryScreen() {
       });
     }
     return items;
-  }, [diaryEntries]);
+  }, [filteredEntries]);
 
-  // ── today vitals strip ──
+  // ── vitals strip (shows selected day or today) ──
+  const vitalsDate = selectedDate ?? todayStr;
   const todayMetrics = useMemo(
-    () => diaryEntries.filter((e) => e.date === todayStr).flatMap((e) => e.metrics),
-    [diaryEntries, todayStr]
+    () => diaryEntries.filter((e) => e.date === vitalsDate).flatMap((e) => e.metrics),
+    [diaryEntries, vitalsDate]
   );
   const todayCount = diaryEntries.filter((e) => e.date === todayStr).length;
 
   const handleShare = async () => {
     setIsSharing(true);
     try {
-      const text = buildShareText(diaryEntries, patient?.name ?? "Patient");
+      const entriesToShare = selectedDate
+        ? diaryEntries.filter((e) => e.date === selectedDate)
+        : diaryEntries;
+      const text = buildShareText(entriesToShare, patient?.name ?? "Patient");
       await Share.share({ message: text, title: "Health Diary" });
     } catch (_) {
     } finally {
@@ -647,10 +820,23 @@ export default function DiaryScreen() {
         </View>
       </View>
 
-      {/* ── today vitals strip ── */}
+      {/* ── day picker ── */}
+      <DayPickerStrip
+        days={dayRange}
+        selectedDate={selectedDate}
+        onSelect={setSelectedDate}
+        entryDates={entryDates}
+        colors={colors}
+      />
+
+      {/* ── vitals strip (selected day or today) ── */}
       {todayMetrics.length > 0 && (
         <View style={[styles.vitalsBar, { backgroundColor: colors.surface, borderBottomColor: colors.borderLight }]}>
-          <Text style={[styles.vitalsLabel, { color: colors.textMuted }]}>Today's vitals</Text>
+          <Text style={[styles.vitalsLabel, { color: colors.textMuted }]}>
+            {selectedDate && selectedDate !== todayStr
+              ? `Vitals — ${shortDate(selectedDate)}`
+              : "Today's vitals"}
+          </Text>
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
@@ -683,19 +869,44 @@ export default function DiaryScreen() {
         ListEmptyComponent={
           <View style={styles.emptyWrap}>
             <View style={[styles.emptyCircle, { backgroundColor: colors.primary + "12" }]}>
-              <Feather name="book-open" size={40} color={colors.primary} />
+              <Feather
+                name={selectedDate ? "calendar" : "book-open"}
+                size={40}
+                color={colors.primary}
+              />
             </View>
-            <Text style={[styles.emptyTitle, { color: colors.text }]}>Start your health diary</Text>
-            <Text style={[styles.emptyDesc, { color: colors.textSecondary }]}>
-              Log your temperature, heart rate, weight, mood and more. Your doctor can review your history to better understand your condition.
+            <Text style={[styles.emptyTitle, { color: colors.text }]}>
+              {selectedDate
+                ? `No entries on ${shortDate(selectedDate)}`
+                : "Start your health diary"}
             </Text>
-            <Pressable
-              onPress={() => router.push("/diary/new")}
-              style={[styles.emptyBtn, { backgroundColor: colors.primary }]}
-            >
-              <Feather name="plus" size={16} color="#fff" />
-              <Text style={styles.emptyBtnText}>Add First Entry</Text>
-            </Pressable>
+            <Text style={[styles.emptyDesc, { color: colors.textSecondary }]}>
+              {selectedDate
+                ? "You haven't logged anything for this day. Tap + to add an entry, or select another day."
+                : "Log your temperature, heart rate, weight, mood and more. Your doctor can review your history to better understand your condition."}
+            </Text>
+            <View style={styles.emptyActions}>
+              {selectedDate && (
+                <Pressable
+                  onPress={() => setSelectedDate(null)}
+                  style={[styles.emptyBtnOutline, { borderColor: colors.border }]}
+                >
+                  <Feather name="layers" size={14} color={colors.textSecondary} />
+                  <Text style={[styles.emptyBtnOutlineText, { color: colors.textSecondary }]}>
+                    Show All
+                  </Text>
+                </Pressable>
+              )}
+              <Pressable
+                onPress={() => router.push("/diary/new")}
+                style={[styles.emptyBtn, { backgroundColor: colors.primary }]}
+              >
+                <Feather name="plus" size={16} color="#fff" />
+                <Text style={styles.emptyBtnText}>
+                  {selectedDate ? "Add Entry" : "Add First Entry"}
+                </Text>
+              </Pressable>
+            </View>
           </View>
         }
         renderItem={({ item }) => {
@@ -867,6 +1078,27 @@ const styles = StyleSheet.create({
     textAlign: "center",
     lineHeight: 22,
   },
+  emptyActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginTop: 6,
+    flexWrap: "wrap",
+    justifyContent: "center",
+  },
+  emptyBtnOutline: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 20,
+    paddingVertical: 13,
+    borderRadius: 14,
+    borderWidth: 1.5,
+  },
+  emptyBtnOutlineText: {
+    fontSize: 14,
+    fontFamily: "Inter_600SemiBold",
+  },
   emptyBtn: {
     flexDirection: "row",
     alignItems: "center",
@@ -874,7 +1106,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 28,
     paddingVertical: 14,
     borderRadius: 16,
-    marginTop: 6,
   },
   emptyBtnText: {
     color: "#fff",
